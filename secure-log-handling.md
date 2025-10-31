@@ -1,4 +1,4 @@
-在RHEL 6及7以上版本中，設定/var/log/secure一天一檔案並在每月底將當月的secure日誌檔案壓縮成tar.gz，可以透過設定logrotate及搭配cron工作來達成。
+在RHEL 6及7以上版本中，設定/var/log/secureo每天生成檔案, 以及在每月1日將上個月的secure日誌檔案壓縮成tar.gz，可以透過設定logrotate及搭配cron工作來達成。
 
 ***
 
@@ -36,12 +36,20 @@
 ```bash
 #!/bin/bash
 TARGET_DIR="/var/log"
-ARCHIVE_DIR="/var/log/archives"
 MONTH=$(date +%Y%m)
-mkdir -p ${ARCHIVE_DIR}
+ARCHIVE_FILE="${TARGET_DIR}/secure_${MONTH}.tar.gz"
 
 # 壓縮當月日誌檔案，例如secure-20251001, secure-20251002 ...
-tar -czf ${ARCHIVE_DIR}/secure_${MONTH}.tar.gz ${TARGET_DIR}/secure-${MONTH}* 2>/dev/null
+tar -czf ${TARGET_DIR}/secure_${MONTH}.tar.gz ${TARGET_DIR}/secure-${MONTH}* 2>/dev/null
+
+if [[ -s ${ARCHIVE_FILE} ]]; then
+    echo "Archive created successfully: ${ARCHIVE_FILE}"
+    # 壓縮成功後刪除當月所有secure日誌檔案
+    rm -f ${TARGET_DIR}/secure-${MONTH}*
+else
+    echo "Failed to create archive or archive is empty, not deleting original log files."
+    exit 1
+fi
 
 # 可選：壓縮後刪除當月的原始logrotated檔案，但須謹慎
 # rm -f ${TARGET_DIR}/secure-${MONTH}*
